@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>맛집 상세 정보 - 부산 맛집 탐방</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .detail-card {
+            max-width: 850px;
+            margin: 40px auto;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+            width: 140px;
+            flex-shrink: 0;
+        }
+        #map {
+            width: 100%;
+            height: 380px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<!-- 상단 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/place/list}">🌊 부산 맛집 지도</a>
+        <div class="ms-auto">
+            <a th:href="@{/place/list}" class="btn btn-outline-light btn-sm">← 맛집 목록으로</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="card detail-card shadow-sm border-0">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0 fw-bold" th:text="${dto.restaurantNameKo != null ? dto.restaurantNameKo.trim() : '맛집 상세 정보'}">맛집 상세 정보</h4>
+            <span class="badge bg-light text-primary fs-6 fw-bold" th:text="${dto.category != null ? dto.category : '맛집'}">카테고리</span>
+        </div>
+
+        <div class="card-body p-4">
+            <!-- 이미지 표시 영역 (imageUrl1, imageUrl2) -->
+            <div class="row mb-4" th:if="${(dto.imageUrl1 != null and dto.imageUrl1 != '') or (dto.imageUrl2 != null and dto.imageUrl2 != '')}">
+                <div class="col-md-6 mb-2" th:if="${dto.imageUrl1 != null and dto.imageUrl1 != ''}">
+                    <img th:src="${dto.imageUrl1}" class="img-fluid rounded shadow-sm w-100" style="height: 250px; object-fit: cover;" alt="맛집 이미지 1"
+                         onerror="this.style.display='none'">
+                </div>
+                <div class="col-md-6 mb-2" th:if="${dto.imageUrl2 != null and dto.imageUrl2 != ''}">
+                    <img th:src="${dto.imageUrl2}" class="img-fluid rounded shadow-sm w-100" style="height: 250px; object-fit: cover;" alt="맛집 이미지 2"
+                         onerror="this.style.display='none'">
+                </div>
+            </div>
+
+            <!-- 식당 ID / 영문명 / 지역구 -->
+            <div class="row mb-3">
+                <div class="col-md-6 d-flex align-items-center mb-2">
+                    <span class="info-label">식당 번호:</span>
+                    <span th:text="${dto.pno}">1</span>
+                </div>
+                <div class="col-md-6 d-flex align-items-center mb-2">
+                    <span class="info-label">지역구:</span>
+                    <span class="badge bg-secondary" th:text="${dto.guName}">해운대구</span>
+                </div>
+            </div>
+
+            <div class="mb-3 d-flex align-items-center" th:if="${dto.restaurantNameEn != null and dto.restaurantNameEn != ''}">
+                <span class="info-label">영문 상호명:</span>
+                <span class="text-secondary" th:text="${dto.restaurantNameEn}">English Name</span>
+            </div>
+
+            <hr>
+
+            <!-- 대표 메뉴 / 주소 / 전화번호 -->
+            <div class="mb-3 d-flex align-items-center">
+                <span class="info-label">대표 메뉴:</span>
+                <span class="fw-bold text-primary fs-5" th:text="${dto.mainMenu != null ? dto.mainMenu : '정보 없음'}">돼지국밥</span>
+            </div>
+
+            <div class="mb-3 d-flex align-items-center">
+                <span class="info-label">주소:</span>
+                <span id="addressValue" th:text="${dto.address != null ? dto.address.trim() : '주소 정보 없음'}">부산광역시 해운대구 우동 1408</span>
+            </div>
+
+            <div class="mb-3 d-flex align-items-center">
+                <span class="info-label">전화번호:</span>
+                <span th:text="${dto.phone != null ? dto.phone : '전화번호 정보 없음'}">051-000-0000</span>
+            </div>
+
+            <!-- 지도 표시 영역 -->
+            <div class="mb-4 mt-3">
+                <label class="info-label d-block mb-2">📍 위치 지도</label>
+                <div id="map"></div>
+            </div>
+
+            <!-- 영업 시간 / 휴무일 / 브레이크 타임 -->
+            <div class="row mb-3">
+                <div class="col-md-6 d-flex align-items-center mb-2">
+                    <span class="info-label">영업시간:</span>
+                    <span th:text="${dto.operatingHours != null ? dto.operatingHours : '정보 없음'}">09:00 ~ 21:00</span>
+                </div>
+                <div class="col-md-6 d-flex align-items-center mb-2">
+                    <span class="info-label">휴무일:</span>
+                    <span th:text="${dto.offDays != null ? dto.offDays : '연중무휴'}">매주 월요일</span>
+                </div>
+            </div>
+
+            <div class="mb-3 d-flex align-items-center">
+                <span class="info-label">브레이크 타임:</span>
+                <span th:text="${dto.breakTime != null ? dto.breakTime : '없음'}">15:00 ~ 17:00</span>
+            </div>
+
+            <hr>
+
+            <!-- 한국어 개요 (summaryKo) -->
+            <div class="mb-3">
+                <label class="info-label d-block mb-2">📝 상세 설명 (한국어):</label>
+                <div class="p-3 bg-light border rounded" th:text="${dto.summaryKo != null and dto.summaryKo != '' ? dto.summaryKo : '등록된 상세 설명이 없습니다.'}">
+                    식당 상세 설명이 들어가는 자리입니다.
+                </div>
+            </div>
+
+            <!-- 영어 개요 (summaryEn) -->
+            <div class="mb-3" th:if="${dto.summaryEn != null and dto.summaryEn != ''}">
+                <label class="info-label d-block mb-2">🌐 Description (English):</label>
+                <div class="p-3 bg-light border rounded text-secondary" th:text="${dto.summaryEn}">
+                    English summary goes here.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 하단 버튼 영역 -->
+        <div class="card-footer text-end bg-white py-3">
+            <a th:href="@{/place/list}" class="btn btn-secondary me-2">목록으로</a>
+            <button type="button" class="btn btn-danger me-2 fw-bold" th:if="${session.loginRole == 'ROLE_ADMIN'}" onclick="removePlace()">🗑️ 맛집 삭제</button>
+            <a th:href="@{/place/modify(pno=${dto.pno})}" class="btn btn-warning" th:if="${session.loginRole == 'ROLE_ADMIN'}">수정하기</a>
+        </div>
+    </div>
+</div>
+
+<!-- 맛집 삭제용 별도 POST 폼 (관리자 전용) -->
+<form id="removeForm" th:action="@{/place/remove}" method="post" style="display: none;">
+    <input type="hidden" name="pno" th:value="${dto.pno}">
+</form>
+
+<footer class="bg-white py-4 border-top text-center text-muted mt-auto">
+    <div class="container">
+        <p class="mb-0">© 2026 부산 맛집 탐방 서비스. All rights reserved.</p>
+    </div>
+</footer>
+
+<!-- 카카오 지도 SDK -->
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=85e3512f4615c1ab4c6aa7d98ac7e10a&libraries=services"></script>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    let rawAddress = /*[[${dto.address}]]*/ "";
+    let guName = /*[[${dto.guName}]]*/ "";
+    let restaurantName = /*[[${dto.restaurantNameKo != null ? dto.restaurantNameKo : '위치'}]]*/ "위치";
+    /*]]>*/
+
+    function removePlace() {
+        if (confirm(`정말 [${restaurantName}] 맛집 정보를 삭제하시겠습니까?\n\n⚠️ 폐업하거나 정보가 사라진 맛집은 삭제 후 복구할 수 없습니다.`)) {
+            document.getElementById('removeForm').submit();
+        }
+    }
+
+    // 공백 trim 정제
+    rawAddress = rawAddress ? rawAddress.trim() : "";
+    guName = guName ? guName.trim() : "";
+    restaurantName = restaurantName ? restaurantName.trim() : "위치";
+
+    const mapContainer = document.getElementById('map'),
+        mapOption = {
+            center: new kakao.maps.LatLng(35.1795543, 129.0756416),
+            level: 3
+        };
+
+    const map = new kakao.maps.Map(mapContainer, mapOption);
+    const geocoder = new kakao.maps.services.Geocoder();
+    const ps = new kakao.maps.services.Places();
+
+    function displayMarker(coords, title) {
+        const marker = new kakao.maps.Marker({
+            map: map,
+            position: coords
+        });
+
+        const infowindow = new kakao.maps.InfoWindow({
+            content: `<div style="width:170px;text-align:center;padding:6px 0;font-size:13px;font-weight:bold;color:#333;">${title}</div>`
+        });
+        infowindow.open(map, marker);
+        map.setCenter(coords);
+    }
+
+    function searchLocation() {
+        if (!rawAddress) {
+            searchByKeyword();
+            return;
+        }
+
+        // 1. 원본 주소 지코더 검색
+        geocoder.addressSearch(rawAddress, function(result, status) {
+            if (status === kakao.maps.services.Status.OK) {
+                const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+                displayMarker(coords, restaurantName);
+            } else {
+                // 2. 주소 정제 (괄호 제거) 후 재검색
+                let cleaned = rawAddress.replace(/\(.*?\)/g, "").replace(/\s\d+층.*/g, "").trim();
+                if (cleaned && cleaned !== rawAddress) {
+                    geocoder.addressSearch(cleaned, function(cResult, cStatus) {
+                        if (cStatus === kakao.maps.services.Status.OK) {
+                            const coords = new kakao.maps.LatLng(cResult[0].y, cResult[0].x);
+                            displayMarker(coords, restaurantName);
+                        } else {
+                            searchByKeyword();
+                        }
+                    });
+                } else {
+                    searchByKeyword();
+                }
+            }
+        });
+    }
+
+    function searchByKeyword() {
+        // 상호명 검색 키워드 다양화 (예: "해운대구 자갈치생선구이" 또는 "자갈치생선구이")
+        let cleanName = restaurantName.replace(/^해운시장상가\s*/, "").replace(/^상가\s*/, "").trim();
+        let query1 = (guName ? "부산 " + guName + " " : "부산 ") + restaurantName;
+
+        ps.keywordSearch(query1, function(data, kStatus) {
+            if (kStatus === kakao.maps.services.Status.OK) {
+                const coords = new kakao.maps.LatLng(data[0].y, data[0].x);
+                displayMarker(coords, restaurantName);
+            } else {
+                let query2 = (guName ? "부산 " + guName + " " : "부산 ") + cleanName;
+                ps.keywordSearch(query2, function(rData, rStatus) {
+                    if (rStatus === kakao.maps.services.Status.OK) {
+                        const coords = new kakao.maps.LatLng(rData[0].y, rData[0].x);
+                        displayMarker(coords, restaurantName);
+                    } else {
+                        ps.keywordSearch(cleanName, function(fData, fStatus) {
+                            if (fStatus === kakao.maps.services.Status.OK) {
+                                const coords = new kakao.maps.LatLng(fData[0].y, fData[0].x);
+                                displayMarker(coords, restaurantName);
+                            } else {
+                                console.warn("위치 탐색 실패:", restaurantName);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    searchLocation();
+</script>
+
+</body>
+</html>
