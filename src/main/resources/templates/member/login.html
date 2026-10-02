@@ -55,6 +55,7 @@
             font-size: 13px;
             margin-bottom: 20px;
             text-align: center;
+            word-break: break-all;
         }
 
         .form-group {
@@ -197,7 +198,8 @@
 
     <!-- 로그인 실패 메시지 -->
     <div th:if="${param.error}" class="error-message">
-        이메일 또는 비밀번호가 올바르지 않습니다.
+        <span th:if="${param.error[0] != '' and param.error[0] != 'true'}" th:text="${param.error[0]}">로그인 오류가 발생했습니다.</span>
+        <span th:if="${param.error[0] == '' or param.error[0] == 'true'}">이메일 또는 비밀번호가 올바르지 않습니다.</span>
     </div>
 
     <!-- 로컬 로그인 폼 -->

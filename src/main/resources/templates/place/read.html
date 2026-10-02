@@ -8,9 +8,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8f9fa; }
-        .detail-card {
+        .detail-card, .review-card {
             max-width: 850px;
-            margin: 40px auto;
+            margin: 20px auto;
         }
         .info-label {
             font-weight: bold;
@@ -24,6 +24,20 @@
             border-radius: 8px;
             border: 1px solid #dee2e6;
         }
+        .star-rating {
+            color: #ffc107;
+            font-size: 1.1rem;
+        }
+        .review-item {
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        .review-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
@@ -32,14 +46,29 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" th:href="@{/place/list}">🌊 부산 맛집 지도</a>
-        <div class="ms-auto">
+        <div class="ms-auto d-flex align-items-center">
+            <!-- 자동 로그아웃 카운트다운 타이머 배지 -->
+            <span id="sessionTimerBadge" th:if="${session.loginMember != null}" class="badge bg-light text-dark me-2 fw-normal" title="5분간 무입력 시 자동 로그아웃">⏱️ 05:00</span>
             <a th:href="@{/place/list}" class="btn btn-outline-light btn-sm">← 맛집 목록으로</a>
         </div>
     </div>
 </nav>
 
+<!-- 알림 메시지 (Flash Attributes) -->
+<div class="container mt-3" style="max-width: 850px;">
+    <div th:if="${msg != null}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${msg}">성공 메시지</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${error != null}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}">오류 메시지</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
 <div class="container">
-    <div class="card detail-card shadow-sm border-0">
+    <!-- 1. 맛집 상세 정보 카드 -->
+    <div class="card detail-card shadow-sm border-0 mt-3">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
             <h4 class="mb-0 fw-bold" th:text="${dto.restaurantNameKo != null ? dto.restaurantNameKo.trim() : '맛집 상세 정보'}">맛집 상세 정보</h4>
             <span class="badge bg-light text-primary fs-6 fw-bold" th:text="${dto.category != null ? dto.category : '맛집'}">카테고리</span>
@@ -136,11 +165,113 @@
 
         </div>
 
-        <!-- 하단 버튼 영역 -->
+        <!-- 하단 관리 버튼 영역 -->
         <div class="card-footer text-end bg-white py-3">
             <a th:href="@{/place/list}" class="btn btn-secondary me-2">목록으로</a>
             <button type="button" class="btn btn-danger me-2 fw-bold" th:if="${session.loginRole == 'ROLE_ADMIN'}" onclick="removePlace()">🗑️ 맛집 삭제</button>
             <a th:href="@{/place/modify(pno=${dto.pno})}" class="btn btn-warning" th:if="${session.loginRole == 'ROLE_ADMIN'}">수정하기</a>
+        </div>
+    </div>
+
+    <!-- 2. 리뷰(방문 후기) 섹션 영역 -->
+    <div class="card review-card shadow-sm border-0 mb-5">
+        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold text-dark">
+                💬 방문자 리뷰 <span class="badge bg-primary rounded-pill ms-1" th:text="${reviews != null ? reviews.size() : 0}">0</span>
+            </h5>
+        </div>
+
+        <div class="card-body p-4">
+
+            <!-- (1) 리뷰 작성 폼 -->
+            <!-- 로그인한 사용자만 작성 가능 -->
+            <div th:if="${session.loginMember != null}" class="card bg-light border-0 p-3 mb-4">
+                <h6 class="fw-bold mb-3">✍️ 리뷰 작성하기</h6>
+                <form th:action="@{/place/review/add}" method="post">
+                    <input type="hidden" name="restaurantId" th:value="${dto.pno}">
+
+                    <div class="row g-2 mb-2">
+                        <!-- 별점 선택 -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">⭐ 별점 평가</label>
+                            <select class="form-select form-select-sm" name="rating" required>
+                                <option value="5" selected>⭐⭐⭐⭐⭐ (5점 - 최고예요!)</option>
+                                <option value="4">⭐⭐⭐⭐ (4점 - 맛있어요)</option>
+                                <option value="3">⭐⭐⭐ (3점 - 보통이에요)</option>
+                                <option value="2">⭐⭐ (2점 - 아쉬워요)</option>
+                                <option value="1">⭐ (1점 - 별로예요)</option>
+                            </select>
+                        </div>
+
+                        <!-- 혼밥 레벨 선택 -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">🍚 혼밥 난이도</label>
+                            <select class="form-select form-select-sm" name="soloLevel">
+                                <option value="LV1" selected>LV1 - 편의점/패스트푸드 수준 (초보 추천)</option>
+                                <option value="LV2">LV2 - 푸드코트/분식집 (무난해요)</option>
+                                <option value="LV3">LV3 - 일반 식당/백반집 (보통)</option>
+                                <option value="LV4">LV4 - 패밀리 레스토랑/고기뷔페 (고수)</option>
+                                <option value="LV5">LV5 - 술집/고깃집 (만렙)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 리뷰 내용 -->
+                    <div class="mb-3">
+                        <textarea class="form-control" name="content" rows="3" placeholder="이 맛집의 솔직한 맛과 분위기, 혼밥 경험을 공유해주세요!" required></textarea>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold">리뷰 등록</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 미로그인 시 로그인 안내 배너 -->
+            <div th:if="${session.loginMember == null}" class="alert alert-secondary text-center py-3 mb-4">
+                <span>리뷰를 작성하려면 로그인이 필요합니다.</span>
+                <a th:href="@{/member/login}" class="btn btn-sm btn-primary ms-2">로그인하러 가기</a>
+            </div>
+
+            <!-- (2) 리뷰 목록 -->
+            <div class="review-list">
+                <!-- 리뷰가 없을 때 -->
+                <div th:if="${reviews == null or #lists.isEmpty(reviews)}" class="text-center py-4 text-muted">
+                    <p class="mb-0 fs-6">아직 등록된 리뷰가 없습니다. ✨</p>
+                    <small>첫 번째 리뷰어가 되어 방문 후기를 남겨보세요!</small>
+                </div>
+
+                <!-- 리뷰가 있을 때 반복 출력 -->
+                <div th:if="${reviews != null and !#lists.isEmpty(reviews)}" th:each="r : ${reviews}" class="review-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="fw-bold text-dark fs-6" th:text="${r.writerNickname}">작성자닉네임</span>
+                            <span class="badge bg-info text-dark ms-2 small" th:if="${r.soloLevel != null}" th:text="${'혼밥 ' + r.soloLevel}">LV1</span>
+                            <span class="text-muted small ms-2" th:text="${r.regDate != null ? #temporals.format(r.regDate, 'yyyy-MM-dd HH:mm') : ''}">2026-10-01</span>
+                        </div>
+
+                        <!-- 삭제 버튼: 작성자 본인이거나 관리자인 경우 노출 -->
+                        <div th:if="${session.loginRole == 'ROLE_ADMIN' or (session.loginMember != null and session.loginMember == r.memberId)}">
+                            <form th:action="@{/place/review/remove}" method="post" onsubmit="return confirm('이 리뷰를 삭제하시겠습니까?');" style="display: inline;">
+                                <input type="hidden" name="reviewId" th:value="${r.id}">
+                                <input type="hidden" name="restaurantId" th:value="${dto.pno}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" style="font-size: 0.75rem;">삭제</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- 별점 표시 -->
+                    <div class="star-rating mb-2">
+                        <span th:each="i : ${#numbers.sequence(1, r.rating)}">⭐</span>
+                    </div>
+
+                    <!-- 리뷰 내용 -->
+                    <p class="mb-0 text-secondary" style="white-space: pre-line;" th:text="${r.content}">
+                        정말 맛있고 혼자 밥 먹기에도 너무 좋은 분위기였어요! 추천합니다.
+                    </p>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -158,6 +289,9 @@
 
 <!-- 카카오 지도 SDK -->
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=85e3512f4615c1ab4c6aa7d98ac7e10a&libraries=services"></script>
+
+<!-- 5분 무활동 자동 로그아웃 스크립트 -->
+<script th:if="${session.loginMember != null}" src="/js/auto-logout.js"></script>
 
 <script th:inline="javascript">
     /*<![CDATA[*/

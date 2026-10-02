@@ -3,33 +3,35 @@ package com.example.matgipv1.config;
 import com.example.matgipv1.domain.Member;
 import com.example.matgipv1.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
-import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
-import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.UUID;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@Log4j2
 public class SecurityConfig {
     private final MemberRepository memberRepository;
     private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+    private final CustomOAuth2FailureHandler customOAuth2FailureHandler;
 
     @Bean
     public SecurityFilterChain filterChain(
@@ -52,6 +54,7 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/member/login")
                         .successHandler(customOAuth2SuccessHandler)
+                        .failureHandler(customOAuth2FailureHandler)
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                 )
 
@@ -72,43 +75,27 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // 네이버 Token 요청시 state 추가 설정
-    @Bean
-    public OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> authorizationCodeAccessTokenResponseClient() {
-        RestClientAuthorizationCodeTokenResponseClient client = new RestClientAuthorizationCodeTokenResponseClient();
-
-        client.addParametersConverter(grantRequest -> {
-            MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
-            String registrationId = grantRequest.getClientRegistration().getRegistrationId();
-
-            if ("naver".equals(registrationId)) {
-                String state = grantRequest.getAuthorizationExchange().getAuthorizationRequest().getState();
-                if (state != null && !state.isBlank()) {
-                    parameters.add("state", state);
-                }
-            }
-            return parameters;
-        });
-
-        return client;
-    }
-
     // OAuth2 사용자 정보 처리 서비스
     @Bean
-    public OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService() {
+    public OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService(PasswordEncoder passwordEncoder) {
         DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
 
         return userRequest -> {
             OAuth2User oAuth2User = delegate.loadUser(userRequest);
             String registrationId = userRequest.getClientRegistration().getRegistrationId();
+            String userNameAttributeName = userRequest.getClientRegistration()
+                    .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
+
             Map<String, Object> attributes = oAuth2User.getAttributes();
+            log.info("OAuth2 User Attributes [{}]: {}", registrationId, attributes);
 
             String providerId;
             String email;
-            String nickname;
+            String nickname = "사용자";
+            String profileImage = null;
 
             // NAVER
-            if ("naver".equals(registrationId)) {
+            if ("naver".equalsIgnoreCase(registrationId)) {
                 Map<String, Object> naverResponse = (Map<String, Object>) attributes.get("response");
                 if (naverResponse == null) {
                     throw new IllegalStateException("네이버 response 데이터가 없습니다.");
@@ -117,32 +104,43 @@ public class SecurityConfig {
                 providerId = String.valueOf(naverResponse.get("id"));
                 Object emailObject = naverResponse.get("email");
                 Object nicknameObject = naverResponse.get("nickname");
+                Object profileImageObject = naverResponse.get("profile_image");
 
                 email = emailObject != null ? String.valueOf(emailObject) : null;
                 nickname = nicknameObject != null ? String.valueOf(nicknameObject) : "네이버사용자";
+                profileImage = profileImageObject != null ? String.valueOf(profileImageObject) : null;
 
                 if (email == null || email.isBlank()) {
                     email = "naver_" + providerId + "@naver.social";
                 }
             }
             // KAKAO
-            else if ("kakao".equals(registrationId)) {
+            else if ("kakao".equalsIgnoreCase(registrationId)) {
                 providerId = String.valueOf(attributes.get("id"));
                 Map<String, Object> properties = (Map<String, Object>) attributes.get("properties");
                 Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
 
-                nickname = null;
-                if (properties != null && properties.get("nickname") != null) {
-                    nickname = String.valueOf(properties.get("nickname"));
+                if (properties != null) {
+                    if (properties.get("nickname") != null) {
+                        nickname = String.valueOf(properties.get("nickname"));
+                    }
+                    if (properties.get("profile_image") != null) {
+                        profileImage = String.valueOf(properties.get("profile_image"));
+                    }
                 }
-                if (nickname == null && kakaoAccount != null && kakaoAccount.get("profile") != null) {
-                    Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
-                    if (profile.get("nickname") != null) {
-                        nickname = String.valueOf(profile.get("nickname"));
+                if ((nickname == null || "사용자".equals(nickname)) && kakaoAccount != null) {
+                    if (kakaoAccount.get("profile") != null) {
+                        Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
+                        if (profile.get("nickname") != null) {
+                            nickname = String.valueOf(profile.get("nickname"));
+                        }
+                        if (profile.get("profile_image_url") != null) {
+                            profileImage = String.valueOf(profile.get("profile_image_url"));
+                        }
                     }
                 }
                 if (nickname == null || nickname.isBlank()) {
-                    nickname = "카카오사용자";
+                    nickname = "카카오_" + providerId;
                 }
 
                 email = null;
@@ -156,23 +154,34 @@ public class SecurityConfig {
                 throw new IllegalStateException("지원하지 않는 OAuth Provider: " + registrationId);
             }
 
-            // 회원 DB 저장 및 조회
+            // 회원 DB 저장 및 조회 (신규 회원이면 등록, 기존 회원이면 조회)
             final String finalEmail = email;
             final String finalNickname = nickname;
+            final String finalProfileImage = profileImage;
+            final String finalProvider = registrationId.toUpperCase();
+            final String finalProviderId = providerId;
 
-            memberRepository.findByEmail(finalEmail)
+            Member member = memberRepository.findByEmail(finalEmail)
                     .orElseGet(() -> memberRepository.save(
                             Member.builder()
                                     .email(finalEmail)
-                                    .password("")
+                                    .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                                     .nickname(finalNickname)
+                                    .profileImage(finalProfileImage)
                                     .role("ROLE_USER")
-                                    .provider(registrationId.toUpperCase())
-                                    .providerId(providerId)
+                                    .provider(finalProvider)
+                                    .providerId(finalProviderId)
                                     .build()
                     ));
 
-            return oAuth2User;
+            log.info("OAuth2 회원 연동 성공: mno={}, email={}, nickname={}, provider={}",
+                    member.getMno(), member.getEmail(), member.getNickname(), member.getProvider());
+
+            return new DefaultOAuth2User(
+                    Collections.singleton(new SimpleGrantedAuthority(member.getRole())),
+                    attributes,
+                    userNameAttributeName
+            );
         };
     }
 }

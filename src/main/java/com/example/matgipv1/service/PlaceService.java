@@ -5,6 +5,8 @@ import dto.PageRequestDTO;
 import dto.PageResponseDTO;
 import dto.PlaceDTO;
 
+import java.util.List;
+
 public interface PlaceService {
     // C: 맛집 등록
     Long register(PlaceDTO placeDTO);
@@ -20,6 +22,9 @@ public interface PlaceService {
 
     // R: 목록 및 검색/페이징 처리 조회
     PageResponseDTO<PlaceDTO> getList(PageRequestDTO pageRequestDTO);
+
+    // 전체 맛집 목록 조회 (지도 표시용)
+    List<PlaceDTO> getAllPlaces();
 
     // DTO -> Entity
     default Place dtoToEntity(PlaceDTO dto) {

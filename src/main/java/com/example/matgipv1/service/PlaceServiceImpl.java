@@ -104,4 +104,12 @@ public class PlaceServiceImpl implements PlaceService {
                 .total((int) result.getTotalElements())
                 .build();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PlaceDTO> getAllPlaces() {
+        return placeRepository.findAll().stream()
+                .map(this::entityToDto)
+                .collect(Collectors.toList());
+    }
 }

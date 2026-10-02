@@ -64,6 +64,8 @@
 <header class="site-header">
     <a th:href="@{/admin/index}" class="site-logo">👑 부산 Tasty (관리자)</a>
     <nav class="site-nav">
+        <!-- 자동 로그아웃 카운트다운 타이머 배지 -->
+        <span id="sessionTimerBadge" th:if="${session.loginMember != null}" style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; font-size: 14px;" title="5분간 무입력 시 자동 로그아웃">⏱️ 05:00</span>
         <a th:href="@{/admin/members}" style="background: #ffeb3b; color: #333; padding: 8px 15px; border-radius: 4px; font-weight: bold;">관리자 목록</a>
         <a th:href="@{/place/list}">사이트 홈</a>
         <a th:href="@{/member/logout}">로그아웃</a>
@@ -83,6 +85,9 @@
         <a th:href="@{/place/list}" class="admin-card">🌊 일반 사이트 홈 이동</a>
     </div>
 </div>
+
+<!-- 5분 무활동 자동 로그아웃 스크립트 -->
+<script th:if="${session.loginMember != null}" src="/js/auto-logout.js"></script>
 
 <script>
     function syncAllOpenApiData() {

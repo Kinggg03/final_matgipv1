@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PlaceRepository extends JpaRepository<Place, Long> {
@@ -25,4 +26,10 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
             " p.mainMenu LIKE CONCAT('%', :keyword, '%') OR " +
             " p.address LIKE CONCAT('%', :keyword, '%'))")
     Page<Place> searchList(@Param("guName") String guName, @Param("category") String category, @Param("keyword") String keyword, Pageable pageable);
+
+    // 오늘 뭐 먹지? (랜덤 가챠용 조건 조회)
+    @Query("SELECT p FROM Place p WHERE " +
+           "(:guName IS NULL OR :guName = '' OR p.guName LIKE CONCAT('%', :guName, '%')) AND " +
+           "(:category IS NULL OR :category = '' OR p.category LIKE CONCAT('%', :category, '%'))")
+    List<Place> findForGacha(@Param("guName") String guName, @Param("category") String category);
 }

@@ -6,8 +6,16 @@
     <title>부산 맛집 탐방</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 가챠 CSS -->
+    <link rel="stylesheet" th:href="@{/css/gacha.css}">
     <style>
         body { background-color: #f8f9fa; }
+        .map-info-window {
+            padding: 10px;
+            font-size: 13px;
+            color: #333;
+            min-width: 180px;
+        }
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
@@ -25,18 +33,30 @@
                     <a class="nav-link text-white active" th:href="@{/place/list}">맛집 목록</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-white" href="#" data-bs-toggle="modal" data-bs-target="#mapModal" onclick="openMapModal()">+ 근처 맛집 지도</a>
+                    <a class="btn btn-warning btn-sm text-dark fw-bold ms-2" href="#" data-bs-toggle="modal" data-bs-target="#mapModal" onclick="openMapModal()">📍 전체 맛집 지도 보기</a>
+                </li>
+                <!-- 🎲 오늘 뭐 먹지? 가챠 버튼 추가 -->
+                <li class="nav-item">
+                    <button type="button" id="openGachaBtn" class="btn btn-danger btn-sm text-white fw-bold ms-2 shadow-sm">
+                        🎲 오늘 뭐 먹지?
+                    </button>
                 </li>
 
                 <!-- 관리자 계정 로그인 시 관리자 센터 링크 표시 -->
                 <li class="nav-item" th:if="${session.loginRole == 'ROLE_ADMIN'}">
-                    <a class="btn btn-warning btn-sm fw-bold ms-2" th:href="@{/admin/index}">👑 관리자 센터</a>
+                    <a class="btn btn-light btn-sm fw-bold ms-2 text-primary" th:href="@{/admin/index}">👑 관리자 센터</a>
                 </li>
 
                 <!-- 일반 회원 로그인 시 마이페이지 버튼 표시 -->
                 <li class="nav-item" th:if="${session.loginMember != null and session.loginRole != 'ROLE_ADMIN'}">
                     <a class="nav-link text-white ms-2" th:href="@{/member/mypage}">👤 마이페이지</a>
                 </li>
+
+                <!-- 자동 로그아웃 카운트다운 타이머 배지 -->
+                <li class="nav-item d-flex align-items-center" th:if="${session.loginMember != null}">
+                    <span id="sessionTimerBadge" class="badge bg-light text-dark ms-2 fw-normal" title="5분간 무입력 시 자동 로그아웃">⏱️ 05:00</span>
+                </li>
+
                 <li class="nav-item" th:if="${session.loginMember != null}">
                     <a class="btn btn-outline-light btn-sm ms-2" th:href="@{/member/logout}">로그아웃</a>
                 </li>
@@ -50,30 +70,173 @@
                 </li>
             </ul>
         </div>
-        <!-- 카카오맵 모달 -->
-        <div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="mapModalLabel">📍 주변 맛집 지도 보기</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-0">
-                        <div id="map" style="width: 100%; height: 450px;"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
-                    </div>
+    </div>
+</nav>
+
+<!-- 전체 540여개 맛집 실시간 지도 모달 -->
+<div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white py-3">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <h5 class="modal-title fw-bold mb-0" id="mapModalLabel">🗺️ 부산 전체 맛집 지도 (실시간 탐색)</h5>
+                    <span id="mapPlaceCount" class="badge bg-light text-primary fw-bold">불러오는 중...</span>
                 </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- 지도 상단 필터 컨트롤 바 -->
+            <div class="p-3 bg-light border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="fw-bold small mb-0 text-secondary">📍 지역구 바로가기:</label>
+                    <select id="modalGuSelect" class="form-select form-select-sm" style="width: 140px;" onchange="moveToGu(this.value)">
+                        <option value="">부산 전체 중심</option>
+                        <option value="해운대구">해운대구</option>
+                        <option value="부산진구">부산진구 (서면)</option>
+                        <option value="수영구">수영구 (광안리)</option>
+                        <option value="중구">중구 (남포/자갈치)</option>
+                        <option value="동래구">동래구</option>
+                        <option value="영도구">영도구</option>
+                        <option value="남구">남구</option>
+                        <option value="금정구">금정구</option>
+                        <option value="북구">북구</option>
+                        <option value="사하구">사하구</option>
+                        <option value="사상구">사상구</option>
+                        <option value="강서구">강서구</option>
+                        <option value="연제구">연제구</option>
+                        <option value="동구">동구 (부산역)</option>
+                        <option value="서구">서구 (송도)</option>
+                        <option value="기장군">기장군</option>
+                    </select>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="moveToMyLocation()">
+                        🎯 내 위치 주변
+                    </button>
+                    <span class="text-muted small">💡 지도를 이동하거나 축소/확대하면 해당 영역의 맛집들이 자동으로 나타납니다.</span>
+                </div>
+            </div>
+
+            <div class="modal-body p-0 position-relative">
+                <div id="map" style="width: 100%; height: 600px;"></div>
+                <div id="mapLoading" class="position-absolute top-50 start-50 translate-middle bg-white p-3 rounded shadow d-none text-center" style="z-index: 1000;">
+                    <div class="spinner-border text-primary spinner-border-sm mb-1" role="status"></div>
+                    <div class="small fw-bold">맛집 위치를 계산하고 있습니다...</div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light py-2">
+                <small class="text-muted me-auto">마커를 클릭하면 맛집의 대표메뉴 및 상세 정보 페이지로 바로 이동할 수 있습니다.</small>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">닫기</button>
             </div>
         </div>
     </div>
-</nav>
+</div>
+
+<!-- 🎲 오늘 뭐 먹지? 가챠 모달 (독립 팝업) -->
+<div id="gachaModal" class="modal-overlay">
+    <div class="gacha-panel">
+        <!-- 닫기 버튼 -->
+        <button type="button" id="closeGachaBtn" class="close-btn" aria-label="닫기">✕</button>
+
+        <!-- 타이틀 -->
+        <div class="gacha-header">
+            <p class="gacha-sub">부산 540여개 맛집 랜덤 추천</p>
+            <h2 class="gacha-title">🎲 오늘 뭐 먹지?</h2>
+        </div>
+
+        <!-- 조건 선택 -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <label for="guSelect" class="filter-label">지역 (부산 구/군)</label>
+                <select id="guSelect" class="gu-select">
+                    <option value="">전체 지역 (부산 전체)</option>
+                    <option value="해운대구">해운대구</option>
+                    <option value="부산진구">부산진구 (서면)</option>
+                    <option value="수영구">수영구 (광안리)</option>
+                    <option value="중구">중구 (남포동/자갈치)</option>
+                    <option value="동래구">동래구</option>
+                    <option value="영도구">영도구</option>
+                    <option value="남구">남구</option>
+                    <option value="금정구">금정구</option>
+                    <option value="북구">북구</option>
+                    <option value="사하구">사하구</option>
+                    <option value="사상구">사상구</option>
+                    <option value="강서구">강서구</option>
+                    <option value="연제구">연제구</option>
+                    <option value="동구">동구 (부산역)</option>
+                    <option value="서구">서구 (송도)</option>
+                    <option value="기장군">기장군</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">카테고리</span>
+                <div class="category-list" id="categoryOptions">
+                    <button type="button" class="category-btn" data-value="한식">한식</button>
+                    <button type="button" class="category-btn" data-value="중식">중식</button>
+                    <button type="button" class="category-btn" data-value="일식">일식</button>
+                    <button type="button" class="category-btn" data-value="양식">양식</button>
+                    <button type="button" class="category-btn" data-value="카페/디저트">카페/디저트</button>
+                    <button type="button" class="category-btn" data-value="분식">분식</button>
+                    <button type="button" class="category-btn" data-value="아시안">아시안</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 가챠 버튼 -->
+        <button type="button" id="drawBtn" class="draw-btn">🎲 가챠 뽑기</button>
+
+        <!-- 뽑는 중 연출 영역 (캡슐) -->
+        <div id="gachaStage" class="gacha-stage hidden">
+            <div class="stage-glow"></div>
+            <div class="capsule">
+                <div class="capsule-top"></div>
+                <div class="capsule-bottom"></div>
+                <div class="capsule-shine"></div>
+            </div>
+            <p id="stageText" class="stage-text">캡슐을 돌리는 중…</p>
+            <div class="stage-flash"></div>
+        </div>
+
+        <!-- 결과 표시 영역 -->
+        <div id="resultArea" class="result-card hidden">
+            <div id="resultImgContainer" class="result-img-wrap hidden">
+                <img id="resultImg" src="" alt="맛집 이미지" class="result-img">
+            </div>
+
+            <div class="result-body">
+                <p class="result-eyebrow">✨ 오늘의 맛집 당첨!</p>
+                <span class="result-tag-badge"><span id="resultTag">부산진구 · 한식</span></span>
+                <h3 id="resultName" class="result-name">맛집 이름</h3>
+                <p id="resultDesc" class="result-desc">소개글이 표시됩니다.</p>
+                <div class="result-menu-box mb-2">
+                    <span class="menu-label">🍽️ 대표메뉴</span>
+                    <span id="resultMenu" class="result-menu">메뉴 정보</span>
+                </div>
+                <div class="text-end" style="margin-top:12px;">
+                    <a id="resultDetailLink" href="#" class="btn btn-primary btn-sm fw-bold">
+                        상세보기 바로가기 →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 가챠 이력 -->
+        <div class="history-section">
+            <p class="history-title">가챠 이력 (최근 3개)</p>
+            <div id="historyList" class="history-list"></div>
+        </div>
+    </div>
+
+    <!-- 폭죽 효과 레이어 -->
+    <div id="confettiLayer" class="confetti-layer"></div>
+</div>
 
 <!-- 메인 콘텐츠 영역 -->
 <main class="container my-4">
 
-    <!-- 1. 메인 히어로 세션 & 검색/필터 영역 -->
+    <!-- 1. 메인 히어로 섹션 & 검색/필터 영역 -->
     <div class="p-5 mb-4 bg-white rounded-3 text-center shadow-sm border">
         <h1 class="display-5 fw-bold text-primary">🌊 부산 맛집 탐방</h1>
         <p class="fs-4 text-secondary">현지인 추천부터 코스 맛집까지, 부산의 진짜 맛을 찾아보세요!</p>
@@ -235,16 +398,42 @@
 
 <!-- Bootstrap 5 JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=85e3512f4615c1ab4c6aa7d98ac7e10a&libraries=services"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=85e3512f4615c1ab4c6aa7d98ac7e10a&libraries=services,clusterer"></script>
+
+<!-- 5분 무활동 자동 로그아웃 스크립트 -->
+<script th:if="${session.loginMember != null}" src="/js/auto-logout.js"></script>
+
+<!-- 🎲 오늘 뭐 먹지? 가챠 스크립트 -->
+<script th:src="@{/js/gacha.js}"></script>
 
 <script th:inline="javascript">
-    let mapContainer, map, mapInitialized = false;
+    let mapContainer, map, clusterer, currentInfoWindow;
+    let allPlacesData = []; // 전체 540여개 맛집 데이터 캐시
+    let isDataLoaded = false;
+    let geocodeCache = new Map(); // 주소 -> LatLng 캐시
+    let activeMarkers = [];
 
-    /*<![CDATA[*/
-    const placeList = /*[[${responseDTO.dtoList}]]*/ [];
-    /*]]>*/
+    // 주요 구별 중심 좌표 프리셋
+    const GU_CENTERS = {
+        '부산전체': { lat: 35.1795543, lng: 129.0756416, level: 7 },
+        '해운대구': { lat: 35.1631, lng: 129.1636, level: 5 },
+        '부산진구': { lat: 35.1559, lng: 129.0595, level: 5 },
+        '수영구': { lat: 35.1457, lng: 129.1131, level: 5 },
+        '중구': { lat: 35.1017, lng: 129.0322, level: 4 },
+        '동래구': { lat: 35.2048, lng: 129.0836, level: 5 },
+        '영도구': { lat: 35.0912, lng: 129.0678, level: 5 },
+        '남구': { lat: 35.1365, lng: 129.0842, level: 5 },
+        '금정구': { lat: 35.2429, lng: 129.0924, level: 5 },
+        '북구': { lat: 35.1970, lng: 128.9902, level: 5 },
+        '사하구': { lat: 35.1044, lng: 128.9749, level: 5 },
+        '사상구': { lat: 35.1526, lng: 128.9912, level: 5 },
+        '강서구': { lat: 35.2122, lng: 128.9805, level: 6 },
+        '연제구': { lat: 35.1765, lng: 129.0797, level: 4 },
+        '동구': { lat: 35.1293, lng: 129.0454, level: 5 },
+        '서구': { lat: 35.0979, lng: 129.0243, level: 5 },
+        '기장군': { lat: 35.2445, lng: 129.2223, level: 6 }
+    };
 
-    // 목록에서 관리자 전용 맛집 삭제 함수
     function deletePlaceFromBtn(btn) {
         const pno = btn.getAttribute('data-pno');
         const name = btn.getAttribute('data-name') || '';
@@ -307,13 +496,94 @@
     function openMapModal() {
         const mapModal = document.getElementById('mapModal');
         mapModal.addEventListener('shown.bs.modal', function () {
-            if (!mapInitialized) {
+            if (!map) {
                 initMap();
-                mapInitialized = true;
             } else {
                 map.relayout();
             }
+            loadAllPlaces();
         }, { once: true });
+    }
+
+    function initMap() {
+        mapContainer = document.getElementById('map');
+        const mapOption = {
+            center: new kakao.maps.LatLng(35.1795543, 129.0756416), // 부산시청 중심
+            level: 6
+        };
+
+        map = new kakao.maps.Map(mapContainer, mapOption);
+
+        // 일반 지도/스카이뷰 컨트롤 추가
+        const mapTypeControl = new kakao.maps.MapTypeControl();
+        map.addControl(mapTypeControl, kakao.maps.ControlPosition.TOPRIGHT);
+
+        // 줌 컨트롤 추가
+        const zoomControl = new kakao.maps.ZoomControl();
+        map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
+
+        // 마커 클러스터러 생성
+        clusterer = new kakao.maps.MarkerClusterer({
+            map: map,
+            averageCenter: true,
+            minLevel: 5,
+            calculator: [10, 30, 50],
+            styles: [{
+                width : '35px', height : '35px',
+                background: 'rgba(13, 110, 253, 0.8)',
+                borderRadius: '50%',
+                color: '#fff',
+                textAlign: 'center',
+                fontWeight: 'bold',
+                lineHeight: '35px'
+            }, {
+                width : '45px', height : '45px',
+                background: 'rgba(255, 193, 7, 0.85)',
+                borderRadius: '50%',
+                color: '#000',
+                textAlign: 'center',
+                fontWeight: 'bold',
+                lineHeight: '45px'
+            }, {
+                width : '55px', height : '55px',
+                background: 'rgba(220, 53, 69, 0.85)',
+                borderRadius: '50%',
+                color: '#fff',
+                textAlign: 'center',
+                fontWeight: 'bold',
+                lineHeight: '55px'
+            }]
+        });
+
+        // 🗺️ 지도 이동(드래그) 또는 줌 변경 완료(idle) 시 이동된 영역에 맞춰 마커 실시간 업데이트!
+        kakao.maps.event.addListener(map, 'idle', function() {
+            updateVisibleMarkers();
+        });
+    }
+
+    function loadAllPlaces() {
+        const badge = document.getElementById('mapPlaceCount');
+        if (isDataLoaded && allPlacesData.length > 0) {
+            updateVisibleMarkers();
+            return;
+        }
+
+        badge.innerText = '맛집 데이터 로딩 중...';
+
+        fetch('/place/api/places')
+            .then(res => res.json())
+            .then(data => {
+                allPlacesData = data;
+                isDataLoaded = true;
+                badge.innerText = `전체 ${data.length}개 맛집 준비 완료`;
+                
+                // 데이터 로드 완료 후 현재 지도 뷰포트에 맞게 마커 표시
+                updateVisibleMarkers();
+            })
+            .catch(err => {
+                console.error('전체 맛집 로딩 실패:', err);
+                badge.innerText = '데이터 로딩 실패';
+            });
     }
 
     function cleanAddress(addr) {
@@ -321,78 +591,142 @@
         return addr.replace(/\(.*?\)/g, "").replace(/\s\d+층.*/g, "").trim();
     }
 
-    function initMap() {
-        mapContainer = document.getElementById('map');
+    // 현재 지도 뷰포트(Bounds)에 맞추어 마커를 동적으로 표시
+    function updateVisibleMarkers() {
+        if (!map || !allPlacesData || allPlacesData.length === 0) return;
 
-        const mapOption = {
-            center: new kakao.maps.LatLng(35.1795543, 129.0756416),
-            level: 6
-        };
-
-        map = new kakao.maps.Map(mapContainer, mapOption);
+        const bounds = map.getBounds();
         const geocoder = new kakao.maps.services.Geocoder();
         const ps = new kakao.maps.services.Places();
 
-        if (placeList && placeList.length > 0) {
-            let bounds = new kakao.maps.LatLngBounds();
+        // 1. 기존 마커 및 클러스터러 클리어
+        clusterer.clear();
+        activeMarkers.forEach(m => m.setMap(null));
+        activeMarkers = [];
 
-            placeList.forEach(place => {
-                if (place.address) {
+        let currentBatch = [];
+        let inViewCount = 0;
+
+        // 540개 전체 맛집 순회하며 위치 변환 및 마커 추가
+        allPlacesData.forEach(place => {
+            if (!place.address) return;
+            const rawAddr = place.address.trim();
+
+            if (geocodeCache.has(rawAddr)) {
+                const coords = geocodeCache.get(rawAddr);
+                if (coords && bounds.contain(coords)) {
+                    inViewCount++;
+                    addMarker(coords, place);
+                }
+            } else {
+                currentBatch.push(place);
+            }
+        });
+
+        const badge = document.getElementById('mapPlaceCount');
+        badge.innerText = `현재 지도 내 맛집: ${inViewCount}개 (전체 ${allPlacesData.length}개)`;
+
+        // 캐시에 없는 주소 비동기 배치 지오코딩 (속도 제한 및 안정적 처리)
+        if (currentBatch.length > 0) {
+            let processed = 0;
+            const batchSize = 15; // 한 번에 변환할 개수
+            const toProcess = currentBatch.slice(0, 40);
+
+            toProcess.forEach((place, index) => {
+                setTimeout(() => {
                     const rawAddr = place.address.trim();
                     const cleanedAddr = cleanAddress(rawAddr);
-                    const placeName = place.restaurantNameKo ? place.restaurantNameKo.trim() : "";
 
                     geocoder.addressSearch(rawAddr, function(result, status) {
                         if (status === kakao.maps.services.Status.OK) {
-                            addMarkerToMap(result[0].y, result[0].x, placeName, place.pno, bounds);
+                            const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+                            geocodeCache.set(rawAddr, coords);
+                            if (map.getBounds().contain(coords)) {
+                                addMarker(coords, place);
+                                updateCountBadge();
+                            }
                         } else if (cleanedAddr && cleanedAddr !== rawAddr) {
                             geocoder.addressSearch(cleanedAddr, function(cResult, cStatus) {
                                 if (cStatus === kakao.maps.services.Status.OK) {
-                                    addMarkerToMap(cResult[0].y, cResult[0].x, placeName, place.pno, bounds);
-                                } else {
-                                    searchKeywordFallback(placeName, place.guName, place.pno, bounds);
+                                    const coords = new kakao.maps.LatLng(cResult[0].y, cResult[0].x);
+                                    geocodeCache.set(rawAddr, coords);
+                                    if (map.getBounds().contain(coords)) {
+                                        addMarker(coords, place);
+                                        updateCountBadge();
+                                    }
                                 }
                             });
-                        } else {
-                            searchKeywordFallback(placeName, place.guName, place.pno, bounds);
                         }
                     });
-                }
+                }, index * 25);
             });
-
-            function searchKeywordFallback(name, gu, pno, bounds) {
-                let cleanName = name.replace(/^해운시장상가\s*/, "").trim();
-                const searchParam = (gu ? "부산 " + gu + " " : "부산 ") + cleanName;
-
-                ps.keywordSearch(searchParam, function(kData, kStatus) {
-                    if (kStatus === kakao.maps.services.Status.OK) {
-                        addMarkerToMap(kData[0].y, kData[0].x, name, pno, bounds);
-                    }
-                });
-            }
-
-            function addMarkerToMap(lat, lng, name, pno, bounds) {
-                const coords = new kakao.maps.LatLng(lat, lng);
-                const marker = new kakao.maps.Marker({
-                    map: map,
-                    position: coords
-                });
-
-                const infowindow = new kakao.maps.InfoWindow({
-                    content: `<div style="padding:6px;font-size:12px;color:#333;width:150px;text-align:center;">
-                                <strong>${name}</strong><br>
-                                <a href="/place/read?pno=${pno}" style="color:#0d6efd;font-weight:bold;">상세보기</a>
-                              </div>`
-                });
-
-                kakao.maps.event.addListener(marker, 'click', function() {
-                    infowindow.open(map, marker);
-                });
-
-                bounds.extend(coords);
-                map.setBounds(bounds);
-            }
         }
+    }
+
+    function updateCountBadge() {
+        const badge = document.getElementById('mapPlaceCount');
+        if (badge) {
+            badge.innerText = `현재 지도 내 맛집: ${activeMarkers.length}개 (전체 ${allPlacesData.length}개)`;
+        }
+    }
+
+    function addMarker(coords, place) {
+        const marker = new kakao.maps.Marker({
+            position: coords
+        });
+
+        const infoContent = `
+            <div class="map-info-window">
+                <div class="fw-bold text-primary mb-1">${place.restaurantNameKo || '맛집'}</div>
+                <div class="small text-muted mb-1"><span class="badge bg-secondary">${place.guName || ''}</span> ${place.category || ''}</div>
+                <div class="small text-dark mb-1">🍽️ ${place.mainMenu || '대표메뉴 정보 없음'}</div>
+                <div class="small text-muted text-truncate mb-2" style="max-width: 200px;">📍 ${place.address || ''}</div>
+                <div class="text-end">
+                    <a href="/place/read?pno=${place.pno}" class="btn btn-primary btn-sm py-0 px-2 fw-bold" style="font-size:12px;">상세보기 →</a>
+                </div>
+            </div>
+        `;
+
+        const infowindow = new kakao.maps.InfoWindow({
+            content: infoContent,
+            removable: true
+        });
+
+        kakao.maps.event.addListener(marker, 'click', function() {
+            if (currentInfoWindow) currentInfoWindow.close();
+            infowindow.open(map, marker);
+            currentInfoWindow = infowindow;
+        });
+
+        activeMarkers.push(marker);
+        clusterer.addMarker(marker);
+    }
+
+    // 지역구 선택 시 해당 지역으로 지도 중심 이동
+    function moveToGu(guName) {
+        if (!map) return;
+        const target = guName && GU_CENTERS[guName] ? GU_CENTERS[guName] : GU_CENTERS['부산전체'];
+        const moveLatLon = new kakao.maps.LatLng(target.lat, target.lng);
+        map.setLevel(target.level);
+        map.panTo(moveLatLon);
+    }
+
+    // 내 위치 주변으로 이동
+    function moveToMyLocation() {
+        if (!navigator.geolocation) {
+            alert('현재 브라우저에서는 위치 정보(GPS)를 지원하지 않습니다.');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const locPosition = new kakao.maps.LatLng(lat, lng);
+            map.setLevel(4);
+            map.panTo(locPosition);
+        }, function() {
+            alert('위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.');
+        });
     }
 </script>
 </body>
