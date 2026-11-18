@@ -3,17 +3,15 @@ package com.example.matgipv1.controller;
 import com.example.matgipv1.domain.Member;
 import com.example.matgipv1.repository.MemberRepository;
 import com.example.matgipv1.service.OpenApiService;
+import com.example.matgipv1.service.ReviewService;
+import dto.ReviewDTO;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -26,6 +24,7 @@ public class AdminController {
 
     private final MemberRepository memberRepository;
     private final OpenApiService openApiService;
+    private final ReviewService reviewService;
 
     // 관리자 여부 검증 메서드
     private boolean isAdmin(HttpSession session) {
@@ -80,7 +79,41 @@ public class AdminController {
         return "redirect:/admin/members";
     }
 
-    // 5. 공공데이터 100건 단위 동기화 API
+    // 5. 관리자 리뷰 관리 목록 화면 (/admin/reviews)
+    @GetMapping("/reviews")
+    public String reviewList(HttpSession session, Model model) {
+        if (!isAdmin(session)) {
+            return "redirect:/place/list?error=unauthorized";
+        }
+
+        List<ReviewDTO> reviewList = reviewService.getAllReviewsForAdmin();
+        model.addAttribute("reviews", reviewList);
+
+        return "admin/AdminReviewManagement";
+    }
+
+    // 6. 관리자 리뷰 숨김(블라인드) / 복원 처리
+    @PostMapping("/reviews/hidden")
+    public String changeReviewHidden(@RequestParam Long rvno,
+                                     @RequestParam boolean hidden,
+                                     HttpSession session) {
+        if (!isAdmin(session)) return "redirect:/place/list?error=unauthorized";
+
+        reviewService.changeHiddenStatus(rvno, hidden);
+        return "redirect:/admin/reviews";
+    }
+
+    // 7. 관리자 리뷰 강제 삭제
+    @PostMapping("/reviews/remove")
+    public String removeReviewByAdmin(@RequestParam Long rvno,
+                                      HttpSession session) {
+        if (!isAdmin(session)) return "redirect:/place/list?error=unauthorized";
+
+        reviewService.deleteReview(rvno, null, true);
+        return "redirect:/admin/reviews";
+    }
+
+    // 8. 공공데이터 100건 단위 동기화 API
     @PostMapping("/sync-opendata")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> syncOpenData(@RequestParam(defaultValue = "1") int pageNo,
@@ -94,7 +127,7 @@ public class AdminController {
         return ResponseEntity.ok(responseMap);
     }
 
-    // 6. 공공데이터 100개씩 순회하여 전체 동기화 (기존 데이터 수정 없이 신규만 누적 추가)
+    // 9. 공공데이터 100개씩 순회하여 전체 동기화 (기존 데이터 수정 없이 신규만 누적 추가)
     @PostMapping("/sync-opendata-all")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> syncAllOpenData(HttpSession session) {

@@ -14,17 +14,20 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-
 public class Review extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "restaurant_id", nullable = false)
-    private Long restaurantId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "restaurant_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_review_place"))
+    private com.example.matgipv1.domain.Place place;
 
-    @Column(name = "member_id", nullable = false)
-    private Long memberId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "member_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_review_member"))
+    private com.example.matgipv1.domain.Member member;
 
     @Column(nullable = false)
     private Integer rating;
@@ -46,4 +49,29 @@ public class Review extends BaseEntity {
 
     @Column(name = "thumbnail_name")
     private String thumbnailName;
+
+    // 리뷰 내용 수정
+    public void change(Integer rating, SoloLevel soloLevel, String content) {
+        if (rating != null) this.rating = rating;
+        if (soloLevel != null) this.soloLevel = soloLevel;
+        if (content != null) this.content = content;
+    }
+
+    // 사진 정보 수정
+    public void updateImage(String originalImageName, String storeImageName, String thumbnailName) {
+        this.originalImageName = originalImageName;
+        this.storeImageName = storeImageName;
+        this.thumbnailName = thumbnailName;
+    }
+
+    // 사진 삭제
+    public void clearImage() {
+        this.originalImageName = null;
+        this.storeImageName = null;
+        this.thumbnailName = null;
+    }
+
+    public void changeHidden(Boolean hidden) {
+        this.hidden = hidden;
+    }
 }

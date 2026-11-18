@@ -67,9 +67,8 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
                 log.info("OAuth2 세션 설정 완료: mno={}, email={}, nickname={}, role={}",
                         member.getMno(), member.getEmail(), member.getNickname(), member.getRole());
 
-                // 📝 멤버 로그인 활동 로그를 LogData 테이블에 자동 저장
+                // 📝 멤버 로그인 활동 로그를 LogData 테이블에 자동 저장 (개인정보 보호 정책에 따라 IP는 저장하지 않음)
                 try {
-                    String ip = LogDataService.getClientIp(request);
                     String userAgent = request.getHeader("User-Agent");
                     String referer = request.getHeader("Referer");
 
@@ -82,7 +81,6 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
                             .description(provider + " 소셜 로그인 성공")
                             .requestUrl(request.getRequestURI())
                             .httpMethod(request.getMethod())
-                            .ipAddress(ip)
                             .userAgent(userAgent)
                             .referer(referer)
                             .statusCode(200)

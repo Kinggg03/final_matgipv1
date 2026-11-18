@@ -32,4 +32,12 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
            "(:guName IS NULL OR :guName = '' OR p.guName LIKE CONCAT('%', :guName, '%')) AND " +
            "(:category IS NULL OR :category = '' OR p.category LIKE CONCAT('%', :category, '%'))")
     List<Place> findForGacha(@Param("guName") String guName, @Param("category") String category);
+
+    // DB에 등록된 중복 없는 지역구 목록 조회
+    @Query("SELECT DISTINCT TRIM(p.guName) FROM Place p WHERE p.guName IS NOT NULL AND TRIM(p.guName) != '' ORDER BY TRIM(p.guName) ASC")
+    List<String> findDistinctGuNames();
+
+    // DB에 등록된 중복 없는 카테고리 목록 조회
+    @Query("SELECT DISTINCT TRIM(p.category) FROM Place p WHERE p.category IS NOT NULL AND TRIM(p.category) != '' ORDER BY TRIM(p.category) ASC")
+    List<String> findDistinctCategories();
 }

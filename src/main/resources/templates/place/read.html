@@ -24,20 +24,6 @@
             border-radius: 8px;
             border: 1px solid #dee2e6;
         }
-        .star-rating {
-            color: #ffc107;
-            font-size: 1.1rem;
-        }
-        .review-item {
-            border-bottom: 1px solid #f0f0f0;
-            padding-bottom: 1rem;
-            margin-bottom: 1rem;
-        }
-        .review-item:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-            margin-bottom: 0;
-        }
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
@@ -70,8 +56,20 @@
     <!-- 1. 맛집 상세 정보 카드 -->
     <div class="card detail-card shadow-sm border-0 mt-3">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
-            <h4 class="mb-0 fw-bold" th:text="${dto.restaurantNameKo != null ? dto.restaurantNameKo.trim() : '맛집 상세 정보'}">맛집 상세 정보</h4>
-            <span class="badge bg-light text-primary fs-6 fw-bold" th:text="${dto.category != null ? dto.category : '맛집'}">카테고리</span>
+            <div class="d-flex align-items-center gap-2">
+                <h4 class="mb-0 fw-bold" th:text="${dto.restaurantNameKo != null ? dto.restaurantNameKo.trim() : '맛집 상세 정보'}">맛집 상세 정보</h4>
+                <span class="badge bg-light text-primary fs-6 fw-bold" th:text="${dto.category != null ? dto.category : '맛집'}">카테고리</span>
+            </div>
+
+            <!-- ❤️ 찜(북마크) 토글 버튼 -->
+            <div>
+                <button type="button" id="bookmarkBtn" class="btn btn-sm fw-bold shadow-sm"
+                        th:classappend="${dto.isBookmarked == true} ? 'btn-danger' : 'btn-outline-light'"
+                        th:onclick="'toggleBookmarkAjax(' + ${dto.pno} + ')'">
+                    <span id="bookmarkIcon" th:text="${dto.isBookmarked == true ? '❤️ 찜 완료' : '🤍 찜하기'}">🤍 찜하기</span>
+                    (<span id="bookmarkCount" th:text="${dto.bookmarkCount != null ? dto.bookmarkCount : 0}">0</span>)
+                </button>
+            </div>
         </div>
 
         <div class="card-body p-4">
@@ -87,21 +85,31 @@
                 </div>
             </div>
 
-            <!-- 식당 ID / 영문명 / 지역구 -->
+            <!-- 식당 ID / 지역구 -->
             <div class="row mb-3">
                 <div class="col-md-6 d-flex align-items-center mb-2">
                     <span class="info-label">식당 번호:</span>
-                    <span th:text="${dto.pno}">1</span>
+                    <span class="fw-bold" th:text="${dto.pno}">1</span>
                 </div>
                 <div class="col-md-6 d-flex align-items-center mb-2">
                     <span class="info-label">지역구:</span>
-                    <span class="badge bg-secondary" th:text="${dto.guName}">해운대구</span>
+                    <span class="badge bg-secondary fs-6" th:text="${dto.guName}">해운대구</span>
                 </div>
             </div>
 
-            <div class="mb-3 d-flex align-items-center" th:if="${dto.restaurantNameEn != null and dto.restaurantNameEn != ''}">
-                <span class="info-label">영문 상호명:</span>
-                <span class="text-secondary" th:text="${dto.restaurantNameEn}">English Name</span>
+            <!-- ⭐ 식당번호와 지역구 밑 줄에 평균 별점 추가 -->
+            <div class="row mb-3">
+                <div class="col-md-6 d-flex align-items-center mb-2">
+                    <span class="info-label">평균 별점:</span>
+                    <span class="fw-bold text-warning fs-5">
+                        <span th:text="|⭐ ${dto.avgRating != null and dto.avgRating > 0 ? dto.avgRating : '0.0'}|">⭐ 4.5</span>
+                        <span class="text-secondary small fw-normal ms-1" th:text="|/ 5.0 (리뷰 ${dto.reviewCount != null ? dto.reviewCount : 0}개)|">/ 5.0 (리뷰 5개)</span>
+                    </span>
+                </div>
+                <div class="col-md-6 d-flex align-items-center mb-2" th:if="${dto.restaurantNameEn != null and dto.restaurantNameEn != ''}">
+                    <span class="info-label">영문 상호명:</span>
+                    <span class="text-secondary" th:text="${dto.restaurantNameEn}">English Name</span>
+                </div>
             </div>
 
             <hr>
@@ -174,106 +182,7 @@
     </div>
 
     <!-- 2. 리뷰(방문 후기) 섹션 영역 -->
-    <div class="card review-card shadow-sm border-0 mb-5">
-        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold text-dark">
-                💬 방문자 리뷰 <span class="badge bg-primary rounded-pill ms-1" th:text="${reviews != null ? reviews.size() : 0}">0</span>
-            </h5>
-        </div>
-
-        <div class="card-body p-4">
-
-            <!-- (1) 리뷰 작성 폼 -->
-            <!-- 로그인한 사용자만 작성 가능 -->
-            <div th:if="${session.loginMember != null}" class="card bg-light border-0 p-3 mb-4">
-                <h6 class="fw-bold mb-3">✍️ 리뷰 작성하기</h6>
-                <form th:action="@{/place/review/add}" method="post">
-                    <input type="hidden" name="restaurantId" th:value="${dto.pno}">
-
-                    <div class="row g-2 mb-2">
-                        <!-- 별점 선택 -->
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">⭐ 별점 평가</label>
-                            <select class="form-select form-select-sm" name="rating" required>
-                                <option value="5" selected>⭐⭐⭐⭐⭐ (5점 - 최고예요!)</option>
-                                <option value="4">⭐⭐⭐⭐ (4점 - 맛있어요)</option>
-                                <option value="3">⭐⭐⭐ (3점 - 보통이에요)</option>
-                                <option value="2">⭐⭐ (2점 - 아쉬워요)</option>
-                                <option value="1">⭐ (1점 - 별로예요)</option>
-                            </select>
-                        </div>
-
-                        <!-- 혼밥 레벨 선택 -->
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">🍚 혼밥 난이도</label>
-                            <select class="form-select form-select-sm" name="soloLevel">
-                                <option value="LV1" selected>LV1 - 편의점/패스트푸드 수준 (초보 추천)</option>
-                                <option value="LV2">LV2 - 푸드코트/분식집 (무난해요)</option>
-                                <option value="LV3">LV3 - 일반 식당/백반집 (보통)</option>
-                                <option value="LV4">LV4 - 패밀리 레스토랑/고기뷔페 (고수)</option>
-                                <option value="LV5">LV5 - 술집/고깃집 (만렙)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- 리뷰 내용 -->
-                    <div class="mb-3">
-                        <textarea class="form-control" name="content" rows="3" placeholder="이 맛집의 솔직한 맛과 분위기, 혼밥 경험을 공유해주세요!" required></textarea>
-                    </div>
-
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold">리뷰 등록</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- 미로그인 시 로그인 안내 배너 -->
-            <div th:if="${session.loginMember == null}" class="alert alert-secondary text-center py-3 mb-4">
-                <span>리뷰를 작성하려면 로그인이 필요합니다.</span>
-                <a th:href="@{/member/login}" class="btn btn-sm btn-primary ms-2">로그인하러 가기</a>
-            </div>
-
-            <!-- (2) 리뷰 목록 -->
-            <div class="review-list">
-                <!-- 리뷰가 없을 때 -->
-                <div th:if="${reviews == null or #lists.isEmpty(reviews)}" class="text-center py-4 text-muted">
-                    <p class="mb-0 fs-6">아직 등록된 리뷰가 없습니다. ✨</p>
-                    <small>첫 번째 리뷰어가 되어 방문 후기를 남겨보세요!</small>
-                </div>
-
-                <!-- 리뷰가 있을 때 반복 출력 -->
-                <div th:if="${reviews != null and !#lists.isEmpty(reviews)}" th:each="r : ${reviews}" class="review-item">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            <span class="fw-bold text-dark fs-6" th:text="${r.writerNickname}">작성자닉네임</span>
-                            <span class="badge bg-info text-dark ms-2 small" th:if="${r.soloLevel != null}" th:text="${'혼밥 ' + r.soloLevel}">LV1</span>
-                            <span class="text-muted small ms-2" th:text="${r.regDate != null ? #temporals.format(r.regDate, 'yyyy-MM-dd HH:mm') : ''}">2026-10-01</span>
-                        </div>
-
-                        <!-- 삭제 버튼: 작성자 본인이거나 관리자인 경우 노출 -->
-                        <div th:if="${session.loginRole == 'ROLE_ADMIN' or (session.loginMember != null and session.loginMember == r.memberId)}">
-                            <form th:action="@{/place/review/remove}" method="post" onsubmit="return confirm('이 리뷰를 삭제하시겠습니까?');" style="display: inline;">
-                                <input type="hidden" name="reviewId" th:value="${r.id}">
-                                <input type="hidden" name="restaurantId" th:value="${dto.pno}">
-                                <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" style="font-size: 0.75rem;">삭제</button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- 별점 표시 -->
-                    <div class="star-rating mb-2">
-                        <span th:each="i : ${#numbers.sequence(1, r.rating)}">⭐</span>
-                    </div>
-
-                    <!-- 리뷰 내용 -->
-                    <p class="mb-0 text-secondary" style="white-space: pre-line;" th:text="${r.content}">
-                        정말 맛있고 혼자 밥 먹기에도 너무 좋은 분위기였어요! 추천합니다.
-                    </p>
-                </div>
-            </div>
-
-        </div>
-    </div>
+    <div th:replace="~{place/fragments :: reviewSection(${dto}, ${reviews}, ${topReviews})}"></div>
 </div>
 
 <!-- 맛집 삭제용 별도 POST 폼 (관리자 전용) -->
@@ -295,21 +204,54 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
-    let rawAddress = /*[[${dto.address}]]*/ "";
-    let guName = /*[[${dto.guName}]]*/ "";
-    let restaurantName = /*[[${dto.restaurantNameKo != null ? dto.restaurantNameKo : '위치'}]]*/ "위치";
+    let rawAddress = (/*[[${dto.address}]]*/ "" || "").trim();
+    let guName = (/*[[${dto.guName}]]*/ "" || "").trim();
+    let restaurantName = (/*[[${dto.restaurantNameKo != null ? dto.restaurantNameKo : '위치'}]]*/ "위치").trim();
     /*]]>*/
+
+    // 찜(북마크) 토글 AJAX
+    function toggleBookmarkAjax(restaurantId) {
+        fetch('/place/bookmark/toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'restaurantId=' + restaurantId
+        })
+        .then(response => {
+            if (response.status === 401) {
+                alert('로그인이 필요한 기능입니다.');
+                window.location.href = '/member/login';
+                return null;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data) return;
+            const btn = document.getElementById('bookmarkBtn');
+            const icon = document.getElementById('bookmarkIcon');
+            const count = document.getElementById('bookmarkCount');
+
+            if (data.bookmarked) {
+                btn.className = 'btn btn-sm btn-danger fw-bold shadow-sm';
+                icon.innerText = '❤️ 찜 완료';
+            } else {
+                btn.className = 'btn btn-sm btn-outline-light fw-bold shadow-sm';
+                icon.innerText = '🤍 찜하기';
+            }
+            if (count) count.innerText = data.count;
+        })
+        .catch(err => {
+            console.error('Bookmark toggle error:', err);
+            alert('찜하기 처리 중 오류가 발생했습니다.');
+        });
+    }
 
     function removePlace() {
         if (confirm(`정말 [${restaurantName}] 맛집 정보를 삭제하시겠습니까?\n\n⚠️ 폐업하거나 정보가 사라진 맛집은 삭제 후 복구할 수 없습니다.`)) {
             document.getElementById('removeForm').submit();
         }
     }
-
-    // 공백 trim 정제
-    rawAddress = rawAddress ? rawAddress.trim() : "";
-    guName = guName ? guName.trim() : "";
-    restaurantName = restaurantName ? restaurantName.trim() : "위치";
 
     const mapContainer = document.getElementById('map'),
         mapOption = {
@@ -365,7 +307,6 @@
     }
 
     function searchByKeyword() {
-        // 상호명 검색 키워드 다양화 (예: "해운대구 자갈치생선구이" 또는 "자갈치생선구이")
         let cleanName = restaurantName.replace(/^해운시장상가\s*/, "").replace(/^상가\s*/, "").trim();
         let query1 = (guName ? "부산 " + guName + " " : "부산 ") + restaurantName;
 
@@ -397,5 +338,7 @@
     searchLocation();
 </script>
 
+<!-- 리뷰 작성/전체보기 Bootstrap 모달 동작에 필요한 JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

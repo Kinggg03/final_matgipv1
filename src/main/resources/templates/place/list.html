@@ -16,6 +16,14 @@
             color: #333;
             min-width: 180px;
         }
+        /* [수정] 마이페이지와 같은 크기의 하트만 표시하고 배경 박스를 제거합니다. */
+        .bookmark-icon-btn { border: 0; background: transparent; box-shadow: none; padding: 0; font-size: 1.25rem; line-height: 1; }
+        .bookmark-icon-btn:hover, .bookmark-icon-btn:focus { background: transparent; box-shadow: none; }
+        /* [수정] 기존 하단 전화번호 영역은 주소 아래 정보로 이동했습니다. */
+        .card-body > .mt-auto > span { display: none; }
+        /* [수정] 기존 카드 상단 배지를 숨기고 새 위치의 구 이름만 사용합니다. */
+        .card > .position-absolute.top-0.start-0.badge.bg-primary,
+        .card > .position-absolute.top-0.end-0.badge.bg-dark { display: none; }
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
@@ -35,7 +43,7 @@
                 <li class="nav-item">
                     <a class="btn btn-warning btn-sm text-dark fw-bold ms-2" href="#" data-bs-toggle="modal" data-bs-target="#mapModal" onclick="openMapModal()">📍 전체 맛집 지도 보기</a>
                 </li>
-                <!-- 🎲 오늘 뭐 먹지? 가챠 버튼 추가 -->
+                <!-- 🎲 오늘 뭐 먹지? 가챠 버튼 -->
                 <li class="nav-item">
                     <button type="button" id="openGachaBtn" class="btn btn-danger btn-sm text-white fw-bold ms-2 shadow-sm">
                         🎲 오늘 뭐 먹지?
@@ -91,22 +99,7 @@
                     <label class="fw-bold small mb-0 text-secondary">📍 지역구 바로가기:</label>
                     <select id="modalGuSelect" class="form-select form-select-sm" style="width: 140px;" onchange="moveToGu(this.value)">
                         <option value="">부산 전체 중심</option>
-                        <option value="해운대구">해운대구</option>
-                        <option value="부산진구">부산진구 (서면)</option>
-                        <option value="수영구">수영구 (광안리)</option>
-                        <option value="중구">중구 (남포/자갈치)</option>
-                        <option value="동래구">동래구</option>
-                        <option value="영도구">영도구</option>
-                        <option value="남구">남구</option>
-                        <option value="금정구">금정구</option>
-                        <option value="북구">북구</option>
-                        <option value="사하구">사하구</option>
-                        <option value="사상구">사상구</option>
-                        <option value="강서구">강서구</option>
-                        <option value="연제구">연제구</option>
-                        <option value="동구">동구 (부산역)</option>
-                        <option value="서구">서구 (송도)</option>
-                        <option value="기장군">기장군</option>
+                        <option th:each="gu : ${guList}" th:value="${gu}" th:text="${gu}">해운대구</option>
                     </select>
                 </div>
                 <div class="d-flex align-items-center gap-2">
@@ -127,7 +120,7 @@
 
             <div class="modal-footer bg-light py-2">
                 <small class="text-muted me-auto">마커를 클릭하면 맛집의 대표메뉴 및 상세 정보 페이지로 바로 이동할 수 있습니다.</small>
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn-secondary btn-sm" data-bs-dismiss="modal">닫기</button>
             </div>
         </div>
     </div>
@@ -145,41 +138,21 @@
             <h2 class="gacha-title">🎲 오늘 뭐 먹지?</h2>
         </div>
 
-        <!-- 조건 선택 -->
+        <!-- 조건 선택 (DB 실시간 데이터 연동) -->
         <div class="filter-section">
             <div class="filter-group">
                 <label for="guSelect" class="filter-label">지역 (부산 구/군)</label>
                 <select id="guSelect" class="gu-select">
                     <option value="">전체 지역 (부산 전체)</option>
-                    <option value="해운대구">해운대구</option>
-                    <option value="부산진구">부산진구 (서면)</option>
-                    <option value="수영구">수영구 (광안리)</option>
-                    <option value="중구">중구 (남포동/자갈치)</option>
-                    <option value="동래구">동래구</option>
-                    <option value="영도구">영도구</option>
-                    <option value="남구">남구</option>
-                    <option value="금정구">금정구</option>
-                    <option value="북구">북구</option>
-                    <option value="사하구">사하구</option>
-                    <option value="사상구">사상구</option>
-                    <option value="강서구">강서구</option>
-                    <option value="연제구">연제구</option>
-                    <option value="동구">동구 (부산역)</option>
-                    <option value="서구">서구 (송도)</option>
-                    <option value="기장군">기장군</option>
+                    <option th:each="gu : ${guList}" th:value="${gu}" th:text="${gu}">해운대구</option>
                 </select>
             </div>
 
             <div class="filter-group">
                 <span class="filter-label">카테고리</span>
                 <div class="category-list" id="categoryOptions">
-                    <button type="button" class="category-btn" data-value="한식">한식</button>
-                    <button type="button" class="category-btn" data-value="중식">중식</button>
-                    <button type="button" class="category-btn" data-value="일식">일식</button>
-                    <button type="button" class="category-btn" data-value="양식">양식</button>
-                    <button type="button" class="category-btn" data-value="카페/디저트">카페/디저트</button>
-                    <button type="button" class="category-btn" data-value="분식">분식</button>
-                    <button type="button" class="category-btn" data-value="아시안">아시안</button>
+                    <button type="button" class="category-btn" th:each="cat : ${categoryList}"
+                            th:data-value="${cat}" th:text="${cat}">한식</button>
                 </div>
             </div>
         </div>
@@ -233,6 +206,22 @@
     <div id="confettiLayer" class="confetti-layer"></div>
 </div>
 
+<!-- 알림 메시지 (Flash Attributes) -->
+<div class="container mt-3" th:if="${msg != null or error != null or result != null}">
+    <div th:if="${msg != null}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${msg}">성공 메시지</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${result != null and result == 'removed'}" class="alert alert-info alert-dismissible fade show" role="alert">
+        <span>맛집 정보가 성공적으로 삭제되었습니다.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${error != null}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}">오류 메시지</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
 <!-- 메인 콘텐츠 영역 -->
 <main class="container my-4">
 
@@ -245,35 +234,21 @@
         <form id="searchForm" action="/place/list" method="get" class="row g-2 justify-content-center mt-3">
             <input type="hidden" name="size" th:value="${pageRequestDTO != null ? pageRequestDTO.size : 10}">
 
-            <!-- 지역구 선택 -->
+            <!-- 지역구 선택 (DB 실시간 데이터 연동) -->
             <div class="col-md-2">
                 <select class="form-select" name="guName" onchange="document.getElementById('searchForm').submit()">
                     <option value="" th:selected="${pageRequestDTO?.guName == null || pageRequestDTO?.guName == ''}">지역구 전체</option>
-                    <option value="해운대구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '해운대구'}">해운대구</option>
-                    <option value="수영구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '수영구'}">수영구</option>
-                    <option value="부산진구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '부산진구'}">부산진구</option>
-                    <option value="중구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '중구'}">중구</option>
-                    <option value="영도구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '영도구'}">영도구</option>
-                    <option value="금정구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '금정구'}">금정구</option>
-                    <option value="동래구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '동래구'}">동래구</option>
-                    <option value="강서구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '강서구'}">강서구</option>
-                    <option value="남구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '남구'}">남구</option>
-                    <option value="북구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '북구'}">북구</option>
-                    <option value="사상구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '사상구'}">사상구</option>
-                    <option value="서구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '서구'}">서구</option>
-                    <option value="연제구" th:selected="${pageRequestDTO != null and pageRequestDTO.guName == '연제구'}">연제구</option>
+                    <option th:each="gu : ${guList}" th:value="${gu}" th:text="${gu}"
+                            th:selected="${pageRequestDTO != null and pageRequestDTO.guName == gu}">해운대구</option>
                 </select>
             </div>
 
-            <!-- 카테고리 선택 -->
+            <!-- 카테고리 선택 (DB 실시간 데이터 연동) -->
             <div class="col-md-2">
                 <select class="form-select" name="category">
                     <option value="">카테고리 전체</option>
-                    <option value="한식" th:selected="${pageRequestDTO != null and pageRequestDTO.category == '한식'}">한식</option>
-                    <option value="일식" th:selected="${pageRequestDTO != null and pageRequestDTO.category == '일식'}">일식</option>
-                    <option value="양식" th:selected="${pageRequestDTO != null and pageRequestDTO.category == '양식'}">양식</option>
-                    <option value="중식" th:selected="${pageRequestDTO != null and pageRequestDTO.category == '중식'}">중식</option>
-                    <option value="카페/디저트" th:selected="${pageRequestDTO != null and pageRequestDTO.category == '카페/디저트'}">카페/디저트</option>
+                    <option th:each="cat : ${categoryList}" th:value="${cat}" th:text="${cat}"
+                            th:selected="${pageRequestDTO != null and pageRequestDTO.category == cat}">한식</option>
                 </select>
             </div>
 
@@ -290,11 +265,16 @@
         </form>
     </div>
 
-    <!-- 2. 총 등록 카운트 정보 & 관리자 전용 전체 동기화 버튼 -->
+    <!-- 2. 총 등록 카운트 정보 & 관리자 전용 맛집 등록 + 전체 동기화 버튼 -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <span class="text-muted">총 <strong class="text-primary" th:text="${responseDTO != null ? responseDTO.total : 0}">0</strong>개의 맛집이 등록되어 있습니다.</span>
         
         <div class="d-flex align-items-center">
+            <!-- 관리자 로그인 시 맛집 등록 버튼 표시 -->
+            <a th:href="@{/place/register}" class="btn btn-sm btn-primary me-2 fw-bold" th:if="${session.loginRole == 'ROLE_ADMIN'}">
+                ➕ 맛집 등록
+            </a>
+
             <!-- 관리자 계정 로그인 시 공공데이터 전체 동기화 버튼 표시 -->
             <button id="syncOpenApiBtn" onclick="syncAllOpenApiData()" class="btn btn-sm btn-outline-success me-2 fw-bold" th:if="${session.loginRole == 'ROLE_ADMIN'}">
                 🔄 공공데이터 전체 동기화
@@ -322,6 +302,12 @@
                 <span class="position-absolute top-0 end-0 m-2 badge bg-dark" th:text="${dto.guName}">지역구</span>
 
                 <!-- 맛집 대표 이미지 -->
+                <!-- [수정] 구 이름과 북마크를 썸네일 좌우 상단에 표시합니다. -->
+                <span class="position-absolute top-0 start-0 m-2 badge bg-dark" style="z-index: 2;" th:text="${dto.guName}">지역구</span>
+                <button type="button" class="position-absolute top-0 end-0 m-2 bookmark-icon-btn" style="z-index: 2;"
+                        th:onclick="'toggleBookmarkAjax(' + ${dto.pno} + ', this)'">
+                    <span th:text="${dto.isBookmarked == true ? '❤️' : '🤍'}">🤍</span>
+                </button>
                 <a th:href="@{/place/read(pno=${dto.pno}, page=${responseDTO.page}, size=${responseDTO.size})}">
                     <img th:src="${dto.imageUrl1 != null and dto.imageUrl1 != '' ? dto.imageUrl1 : 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80'}"
                          class="card-img-top" alt="맛집 이미지" style="height: 180px; object-fit: cover;"
@@ -349,10 +335,30 @@
 
                     <p class="card-text text-secondary small text-truncate mb-2" th:if="${dto.mainMenu != null}">
                         🍽️ <span th:text="${dto.mainMenu}">대표메뉴</span>
+                        <!-- [수정] 전화번호를 이동합니다. -->
+                    <span class="card-text text-secondary small text-truncate mb-2">
+                        📞<span th:text="${dto.phone != null ? dto.phone : '전화번호 미등록'}">051-000-0000</span>
+                    </span>
                     </p>
 
+                    <!-- [수정] 별점을 상세보기 버튼보다 먼저 표시합니다. -->
+                    <div class="d-none d-flex align-items-center small text-secondary mb-2">
+                        <span th:if="${dto.avgRating != null and dto.avgRating > 0}"
+                              th:each="i : ${#numbers.sequence(1, 5)}"
+                              th:text="${i <= T(java.lang.Math).round(dto.avgRating) ? '⭐' : '☆'}">⭐</span>
+                        <span class="text-secondary ms-1"
+                              th:text="|${dto.avgRating != null ? dto.avgRating : 0.0} / 5.0 (${dto.reviewCount != null ? dto.reviewCount : 0}개)|">0.0 / 5.0 (0개)</span>
+                    </div>
                     <div class="mt-auto pt-2 border-top d-flex justify-content-between align-items-center small text-secondary">
                         <span th:text="${dto.phone != null ? dto.phone : '전화번호 미등록'}">051-000-0000</span>
+                        <!-- [수정] 같은 줄의 왼쪽에 별점·리뷰 수를 배치합니다. -->
+                        <div class="d-flex align-items-center text-nowrap">
+                            <span th:if="${dto.avgRating != null and dto.avgRating > 0}"
+                                  th:each="i : ${#numbers.sequence(1, 5)}"
+                                  th:text="${i <= T(java.lang.Math).round(dto.avgRating) ? '⭐' : '☆'}">⭐</span>
+                            <span class="text-secondary ms-1"
+                                  th:text="|${dto.avgRating != null ? dto.avgRating : 0.0} / 5.0 (${dto.reviewCount != null ? dto.reviewCount : 0}개)|">0.0 / 5.0 (0개)</span>
+                        </div>
                         <div class="d-flex align-items-center">
                             <!-- 관리자인 경우 목록에서 바로 삭제 가능한 삭제 버튼 표시 -->
                             <button type="button" class="btn btn-sm btn-outline-danger me-1"
@@ -361,6 +367,11 @@
                                     th:data-name="${dto.restaurantNameKo}"
                                     onclick="deletePlaceFromBtn(this)">삭제</button>
                             <a th:href="@{/place/read(pno=${dto.pno}, page=${responseDTO.page}, size=${responseDTO.size})}" class="btn btn-sm btn-outline-primary">상세보기</a>
+                            <span class="d-none" th:if="${dto.avgRating != null and dto.avgRating > 0}"
+                                  th:each="i : ${#numbers.sequence(1, 5)}"
+                                  th:text="${i <= T(java.lang.Math).round(dto.avgRating) ? '⭐' : '☆'}">⭐</span>
+                            <span class="d-none text-secondary ms-1"
+                                  th:text="|${dto.avgRating != null ? dto.avgRating : 0.0} / 5.0 (${dto.reviewCount != null ? dto.reviewCount : 0}개)|">0.0 / 5.0 (0개)</span>
                         </div>
                     </div>
                 </div>
@@ -703,6 +714,26 @@
     }
 
     // 지역구 선택 시 해당 지역으로 지도 중심 이동
+    // [수정] 목록 카드 북마크를 상세 화면과 동일한 AJAX 방식으로 처리합니다.
+    function toggleBookmarkAjax(restaurantId, button) {
+        fetch('/place/bookmark/toggle', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'restaurantId=' + encodeURIComponent(restaurantId)
+        }).then(function(response) {
+            if (response.status === 401) {
+                alert('로그인이 필요합니다.');
+                return null;
+            }
+            return response.json();
+        }).then(function(data) {
+            if (!data) return;
+            button.querySelector('span').textContent = data.bookmarked ? '❤️' : '🤍';
+        }).catch(function(error) {
+            console.error('북마크 처리 실패:', error);
+        });
+    }
+
     function moveToGu(guName) {
         if (!map) return;
         const target = guName && GU_CENTERS[guName] ? GU_CENTERS[guName] : GU_CENTERS['부산전체'];

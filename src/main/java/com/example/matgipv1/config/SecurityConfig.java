@@ -43,9 +43,9 @@ public class SecurityConfig {
                 // 1. CSRF 비활성화
                 .csrf(csrf -> csrf.disable())
 
-                // 2. URL 접근 권한 설정
+                // 2. URL 접근 권한 설정 (/upload/** 정적 업로드 사진 허용 추가)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/place/**", "/member/**", "/admin/**", "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+                        .requestMatchers("/", "/place/**", "/member/**", "/admin/**", "/upload/**", "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                         .requestMatchers("/api/**").permitAll()
                         .anyRequest().authenticated()
                 )

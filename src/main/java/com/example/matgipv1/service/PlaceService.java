@@ -21,10 +21,16 @@ public interface PlaceService {
     void remove(Long pno);
 
     // R: 목록 및 검색/페이징 처리 조회
-    PageResponseDTO<PlaceDTO> getList(PageRequestDTO pageRequestDTO);
+    PageResponseDTO<PlaceDTO> getList(PageRequestDTO pageRequestDTO, Long memberNo);
 
     // 전체 맛집 목록 조회 (지도 표시용)
     List<PlaceDTO> getAllPlaces();
+
+    // DB에 등록된 지역구 목록 조회
+    List<String> getGuList();
+
+    // DB에 등록된 카테고리 목록 조회
+    List<String> getCategoryList();
 
     // DTO -> Entity
     default Place dtoToEntity(PlaceDTO dto) {

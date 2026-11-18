@@ -3,6 +3,9 @@ package com.example.matgipv1.domain;
 import lombok.*;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "busan_restaurants")
 @Getter
@@ -73,6 +76,16 @@ public class Place extends BaseEntity {
 
     @Column(name = "api_id", length = 50)
     private String apiId;
+
+    @OneToMany(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @ToString.Exclude
+    private List<Bookmark> bookmarks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @ToString.Exclude
+    private List<com.example.matgipv1.domain.review.Review> reviews = new ArrayList<>();
 
     // 정보 수정을 위한 변경 메서드
     public void change(

@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Getter
 @NoArgsConstructor
@@ -39,6 +42,14 @@ public class Member {
     private String provider = "LOCAL"; // LOCAL, NAVER 등
 
     @Column(name = "provider_id")
+
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Bookmark> bookmarks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<com.example.matgipv1.domain.review.Review> reviews = new ArrayList<>();
 
     // 닉네임 / 프로필 이미지 수정
     public void changeProfile(String nickname, String profileImage) {
